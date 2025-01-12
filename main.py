@@ -5,6 +5,7 @@ import subprocess
 import platform
 import shutil
 import re
+import requests
 import time
 import json
 from datetime import datetime
@@ -15,10 +16,9 @@ from CoreLocation import CLLocationManager, CLLocation, kCLAuthorizationStatusAu
 import objc
 from fileOperations import file_operations
 from systemOperations import system_operations
-from functionalityControl import functionality_control
 
 # Configure the Gemini API
-genai.configure(api_key="AIzaSyAyYi5j2o7EPC5ne7Mdsu8f_HNU40DhpbE")  # Replace with your actual API key
+genai.configure(api_key)  # Replace with your actual API key
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Contextual data
@@ -29,6 +29,15 @@ context = {
     "recent_operations": deque(maxlen=10),  # Recent operations
     "common_demands": defaultdict(int),  # Commonly requested commands
 }
+def get_location():
+    return 30.9685, 76.5267
+def find_folder(folder_name):
+    """Search for a folder on the system."""
+    for root, dirs, files in os.walk("/" if platform.system() != "Windows" else "C:\\"):
+        for dir in dirs:
+            if folder_name.lower() in dir.lower():
+                return os.path.join(root, dir)
+    return None
 def listen_for_wake_word(wake_word="emily"):
     """Continuously listen for the wake word."""
     recognizer = sr.Recognizer()
@@ -122,7 +131,7 @@ def text_to_speech(text):
     engine = pyttsx3.init()
     engine.setProperty('voice', 'com.apple.speech.synthesis.voice.samantha')
     rate = engine.getProperty('rate')
-    engine.setProperty('rate', rate)
+    engine.setProperty('rate', rate-10)
     engine.say(text)
     engine.runAndWait()
 
@@ -228,33 +237,157 @@ def process_for_speech(llm_response):
         print(f"Error while processing for speech: {str(e)}")
         return "I'm sorry, I couldn't process the response. Please try again."
 
+
+def set_volume_mac(volume_level):
+    """
+    Set the system volume on macOS.
+    :param volume_level: Volume level (0 to 100).
+    """
+    if 0 <= volume_level <= 100:
+        try:
+            # Use the exact volume percentage directly (no macOS-specific scaling is required here).
+            subprocess.run(
+                ["osascript", "-e", f"set volume output volume {volume_level}"],
+                check=True
+            )
+            print(f"Volume successfully set to {volume_level}%.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error setting volume. Error message: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+    else:
+        print("Volume level must be between 0 and 100.")
+def functionality_control(command):
+    """
+    Perform various functionality controls including weather information.
+    Currently supports:
+    - Weather information (temperature, rain chance, air quality)
+    """
+    if "weather" in command.lower():
+        try:
+            # Replace with your WeatherAPI.com key (free tier)
+            API_KEY = ""
+            
+            # Get current location
+            text_to_speech("Getting your current location...")
+            latitude, longitude = get_location()
+            
+            if not latitude or not longitude:
+                text_to_speech("Unable to get your location. Please check your location services settings.")
+                return
+            
+            # Get weather data from WeatherAPI.com
+            url = f"http://api.weatherapi.com/v1/forecast.json?key={API_KEY}&q={latitude},{longitude}&aqi=yes"
+            
+            response = requests.get(url)
+            data = response.json()
+            
+            if response.status_code == 200:
+                # Extract location
+                location = data['location']['name']
+                region = data['location']['region']
+                
+                # Current weather data
+                current = data['current']
+                temperature = round(current['temp_c'])
+                feels_like = round(current['feelslike_c'])
+                condition = current['condition']['text']
+                
+                # Air quality
+                air_quality = current['air_quality']
+                us_epa_index = air_quality.get('us-epa-index', 0)
+                aqi_descriptions = {
+                    1: "Good",
+                    2: "Moderate",
+                    3: "Unhealthy for sensitive groups",
+                    4: "Unhealthy",
+                    5: "Very Unhealthy",
+                    6: "Hazardous"
+                }
+                
+                # Get chance of rain from forecast
+                forecast = data['forecast']['forecastday'][0]['day']
+                chance_of_rain = forecast['daily_chance_of_rain']
+                
+                # Build and speak the weather report
+                report = f"Current weather in {location}, {region}: "
+                report += f"Temperature is {temperature}°C, feels like {feels_like}°C. "
+                report += f"Conditions are {condition}. "
+                report += f"Chance of rain today is {chance_of_rain}%. "
+                
+                if us_epa_index in aqi_descriptions:
+                    report += f"Air quality is {aqi_descriptions[us_epa_index]}. "
+                
+                # Additional details
+                humidity = current['humidity']
+                wind_kph = current['wind_kph']
+                report += f"Humidity is {humidity}%, "
+                report += f"and wind speed is {round(wind_kph)} kilometers per hour."
+                
+                text_to_speech(report)
+                
+            else:
+                text_to_speech("Sorry, I couldn't retrieve the weather information. Please check your API key and internet connection.")
+                
+        except requests.RequestException as e:
+            text_to_speech("Sorry, there was an error connecting to the weather service. Please check your internet connection.")
+            print(f"Error: {str(e)}")
+            
+        except Exception as e:
+            text_to_speech("Sorry, there was an unexpected error getting the weather information.")
+            print(f"Error: {str(e)}")
 # Handle user commands
 def handle_command(command):
     if command is None:
         return
-
-    update_common_demands(command)
-    llm_response = call_gemini_api(command)
-    print(f"AI Understanding: {llm_response}")
-
-    speech_response = process_for_speech(llm_response)
-    text_to_speech(speech_response)
-
-    if "create folder" in command or "delete folder" in command or "list files" in command:
-        folder_name = command.split("folder")[-1].strip()
-        update_recent_folders(folder_name)
-        file_operations(command)
-    elif "create file" in command or "delete file" in command:
-        update_recent_operations(command)
-        file_operations(command)
-    elif "open" in command or "close" in command or "bluetooth" in command:
-        app_name = command.split("open")[-1].strip()
-        update_app_usage(app_name)
-        system_operations(command)
-    elif "weather" in command:
+    if any(op in command for op in ["time"]):
+                current_time = time.strftime("%I:%M %p")
+                text_to_speech(f"The current time is {current_time}.")
+    elif any(op in command for op in ["volume"]):
+        match = re.search(r"set volume to (\d+)", command)
+        if match:
+            volume_level = int(match.group(1))
+            print(f"Setting volume to {volume_level}...")
+            if platform.system() == "Darwin":  # macOS
+                set_volume_mac(volume_level)
+            else:
+                text_to_speech("Unsupported operating system.")
+        else:
+            text_to_speech("Invalid command format. Use 'set volume to <level>'.")
+    elif any(op in command for op in ['weather']):
         functionality_control(command)
+    elif any(op in command for op in ["find", "search"]):
+        text_to_speech("Please provide the folder name you want to search for.")
+        folder_name = speech_to_text()
+        folder_path = find_folder(folder_name)
+        if folder_path:
+            text_to_speech(f"Folder '{folder_name}' found at: {folder_path}")
+        else:
+            text_to_speech(f"Folder '{folder_name}' not found.")
     else:
-        text_to_speech("I'm not sure how to help with that. Could you please rephrase your request?")
+        update_common_demands(command)
+        llm_response = call_gemini_api(command)
+        print(f"AI Understanding: {llm_response}")
+
+        speech_response = process_for_speech(llm_response)
+        text_to_speech(speech_response)
+
+        if "create folder" in command or "delete folder" in command or "list files" in command:
+            folder_name = command.split("folder")[-1].strip()
+            update_recent_folders(folder_name)
+            file_operations(command)
+        elif "create file" in command or "delete file" in command:
+            update_recent_operations(command)
+            file_operations(command)
+        elif "move file" in command or "rename file" in command:
+            update_recent_operations(command)
+            file_operations(command)
+        elif "open" in command or "close" in command or "bluetooth" in command:
+            app_name = command.split("open")[-1].strip()
+            update_app_usage(app_name)
+            system_operations(command)
+        else:
+            text_to_speech("I'm not sure how to help with that. Could you please rephrase your request?")
 
 # Main function
 def main():

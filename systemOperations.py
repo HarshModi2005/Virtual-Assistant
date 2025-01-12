@@ -1,9 +1,43 @@
 import os
+import pyttsx3
+import speech_recognition as sr
 import subprocess
+import platform
+import re
+import google.generativeai as genai
+import shutil
+import glob
 import time
+import requests
+import json
+from datetime import datetime
+import pvporcupine
+import pyaudio
+import struct
 
+def text_to_speech(text):
+    engine = pyttsx3.init()
+    engine.setProperty('voice', 'com.apple.speech.synthesis.voice.samantha')
+    rate = engine.getProperty('rate')
+    engine.setProperty('rate', rate-10)
+    engine.say(text)
+    engine.runAndWait()
 
-
+# Speech-to-Text
+def speech_to_text():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        try:
+            audio = recognizer.listen(source)
+            command = recognizer.recognize_google(audio).lower()
+            print(f"You said: {command}")
+            return command
+        except sr.UnknownValueError:
+            text_to_speech("Sorry, I didn't catch that. Please try again.")
+        except sr.RequestError:
+            text_to_speech("There seems to be an issue with the speech recognition service.")
+        return None
 
 def system_operations(command):
     """
@@ -108,14 +142,20 @@ def system_operations(command):
     
     elif "close" in command:
         text_to_speech(f"Are you sure you want to close {app_name}?")
-        time.sleep(3)
         confirm = speech_to_text().strip().lower()
-        if confirm == "yes":
+
+        if 'yes' or 'Yes' in confirm:
             try:
-                subprocess.run(["pkill", "-f", app_name], check=True)
-                print(f"Closed {app_name}")
+                # Use `osascript` to find and close the app by its name
+                script = f"""
+                tell application "{app_name}" to quit
+                """
+                subprocess.run(["osascript", "-e", script], check=True)
+                text_to_speech(f"{app_name} has been closed.")
+            except subprocess.CalledProcessError:
+                text_to_speech(f"Could not close {app_name}. Make sure it is running.")
             except Exception as e:
-                print(f"Error closing {app_name}: {e}")
+                text_to_speech(f"An error occurred while closing {app_name}: {e}")
         else:
-            print(f"Operation to close {app_name} cancelled.")
+            text_to_speech("Operation to close the application has been cancelled.")
 

@@ -1,30 +1,13 @@
 {
     "user": {
-        "name": "Daddy",
+        "name": "",
         "preferences": {}
     },
-    "app_usage": {
-        "telegram": 1,
-        "spotify": 1,
-        "bluetooth hai tumhare mein chal raha tha mere mein kuchh permission nahin chal raha tha": 1
-    },
-    "recent_folders": [],
-    "recent_operations": [],
+    "app_usage": {},
+    "recent_folders": [
+    ],
+    "recent_operations": [
+    ],
     "common_demands": {
-        "open safari": 2,
-        "open telegram": 1,
-        "sexy bhai": 1,
-        "can you create a folder named others in the current directory": 1,
-        "abe yaar yah folder banaa": 1,
-        "men mein apna": 1,
-        "do bar bola hai how can i": 1,
-        "bus theek to hai": 1,
-        "dusre wale mein yah poochhegi": 1,
-        "open spotify": 1,
-        "bluetooth hai tumhare mein chal raha tha mere mein kuchh permission nahin chal raha tha": 1,
-        "dekhe mili sunte hi activate ho gaya": 1,
-        "uski vah khatm ho jayegi na": 1,
-        "main clone nahin kar raha tere ko main sidha ismein upload kar": 1,
-        "abe agar in case dekh 6:00": 1
     }
 }
