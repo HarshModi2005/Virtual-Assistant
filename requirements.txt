@@ -1,0 +1,6 @@
+pyttsx3
+SpeechRecognition
+google-generativeai
+requests
+pvporcupine
+pyaudio

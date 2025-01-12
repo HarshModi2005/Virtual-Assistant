@@ -1,6 +1,5 @@
 # README: Virtual Assistant
 
-
 ## Overview
 
 The **Python Automation Toolkit** is a collection of Python scripts designed to simplify and automate various tasks. It integrates system controls, file management, application handling, and real-time weather reporting. With support for speech input and output, the toolkit provides a hands-free and intuitive user experience.
@@ -115,5 +114,3 @@ The toolkit uses speech recognition for commands and responds via text-to-speech
 This project is open-source and available under the [MIT License](https://opensource.org/licenses/MIT).
 
 ---
-
-Let me know if you need further customization or additional details!

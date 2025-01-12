@@ -408,9 +408,9 @@ def main():
         command = speech_to_text()
         if command:
             if "exit" in command or "quit" in command or "chup" in command:
-                text_to_speech("Goodbye! Have a great day.")
+                text_to_speech("Goodbye! and have a great day.")
                 break
             handle_command(command)
 
 if __name__ == "__main__":
-    listen_for_wake_word()
+    listen_for_wake_word() 
