@@ -6,6 +6,8 @@ The **Python Automation Toolkit** is a collection of Python scripts designed to 
 
 ---
 
+This is the result of a group collaboration between the contributors namely, Myself, Vedant Singh Bedi and Harsh Modi 
+
 ## Features
 
 ### 1. **Weather Information**
