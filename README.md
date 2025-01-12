@@ -109,6 +109,12 @@ The toolkit uses speech recognition for commands and responds via text-to-speech
 - **Error Handling**:
   - Add more robust exception handling for edge cases.
 
+
+
+## Check out a demo of Emily:
+
+https://drive.google.com/file/d/19zc4POFddcFdn_5bSfo4U17MpsUXsrDZ/view?usp=sharing
+
 ---
 
 ## License
